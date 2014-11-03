@@ -52,7 +52,7 @@ def decide(input_file, watchlist_file, countries_file):
 
     # Create empty decision_list to hold decision(s); return decision_list empty if traveler_records is empty.
     decision_list = []
-    if traveler_records.len() is 0:
+    if len(traveler_records) is 0:
         return decision_list
 
     # Loop through the traveler_records and add the decision for each entry to the decision_list.
@@ -75,7 +75,7 @@ def decide(input_file, watchlist_file, countries_file):
         elif on_watchlist(entry, watchlist):
             decision_list.append("Secondary")
 
-        # Accept if no non-Accept conditions have been met.
+        # Accept if none of the other conditions have been met.
         else:
             decision_list.append("Accept")
 
