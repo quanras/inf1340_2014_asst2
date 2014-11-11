@@ -27,6 +27,8 @@ def decide(input_file, watchlist_file, countries_file):
     :return: List of strings representing the immigration decision, one for each record.
     Possible values of strings are: "Accept", "Reject", "Secondary", and "Quarantine"
     """
+
+
     # Read in input_file
     traveler_records = json.loads(input_file)
 
@@ -79,7 +81,7 @@ def decide(input_file, watchlist_file, countries_file):
                 decision_list.append('Reject')
 
         # Check for Secondary Processing conditions.
-        elif on_watchlist(record['first_name'], record['last_name'], record['passport'] watchlist):
+        elif on_watchlist(record['first_name'], record['last_name'], record['passport'], watchlist):
             decision_list.append('Secondary')
 
         # Accept if none of the non-Accept conditions have been met.
@@ -181,7 +183,7 @@ def on_watchlist(first_name, last_name, passport, watchlist):
     :param last_name: the record's last_name entry
     :param passport: the record's passport
     :param watchlist: the watchlist JSON object
-    :return: True if the record's first and last name or passport are on the Watchlist, False otherwise.
+    :return: Boolean; True if the record's first and last name or passport are on the Watchlist, False otherwise.
     """
     for watchlist_item in watchlist:
         if watchlist_item['first_name'] == first_name and watchlist_item['last_name'] == last_name:
@@ -197,7 +199,7 @@ def returning_home(home_country, reason_for_entry):
     """
     :param home_country: the record's home country entry.
     :param reason_for_entry: the record's entry_reason entry.
-    :return: boolean, True if the record has home_country equal to KAN and reason_For_entry equal to returning;
+    :return: Boolean, True if the record has home_country equal to KAN and reason_For_entry equal to returning;
     False otherwise.
     """
     if home_country == 'KAN' and reason_for_entry == 'returning':
@@ -215,7 +217,7 @@ def visitor_visa_required(reason_for_entry, home_country, visitor_visa_list):
     """
     if reason_for_entry == 'visit':
         for country in visitor_visa_list:
-            if home_country == country:
+            if home_country == country['code']:
                 return True
     return False
 
