@@ -12,19 +12,20 @@ __status__ = "Final Submission"
 
 # imports one per line
 import re
-import datetime
 import json
+import datetime
 
 
 def decide(input_file, watchlist_file, countries_file):
     """
     Decides whether a traveller's entry into Kanadia should be accepted
 
-    :param input_file: The name of a JSON formatted file that contains cases to decide
-    :param watchlist_file: The name of a JSON formatted file that contains names and passport numbers on a watchlist
+    :param input_file: The name of a JSON formatted file that contains the immigration records requiring decisions.
+    :param watchlist_file: The name of a JSON formatted file that contains names and passport numbers on a watchlist.
     :param countries_file: The name of a JSON formatted file that contains country data, such as whether
         an entry or transit visa is required, and whether there is currently a medical advisory
-    :return: List of strings. Possible values of strings are: "Accept", "Reject", "Secondary", and "Quarantine"
+    :return: List of strings representing the immigration decision, one for each record.
+    Possible values of strings are: "Accept", "Reject", "Secondary", and "Quarantine"
     """
     # Read in input_file
     traveler_records = json.loads(input_file)
@@ -52,7 +53,7 @@ def decide(input_file, watchlist_file, countries_file):
 
     # Create empty decision_list to hold decision(s); return decision_list empty if traveler_records is empty.
     decision_list = []
-    if len(traveler_records) is 0:
+    if traveler_records.len() is 0:
         return decision_list
 
     # Loop through the traveler_records and add the decision for each entry to the decision_list.
@@ -60,22 +61,21 @@ def decide(input_file, watchlist_file, countries_file):
     for record in traveler_records:
 
         # Check for Quarantine condition.
-        if has_medical_advisory(record[], record[], medical_advisories):
+        if has_medical_advisory(record['home']['country'], record['from']['country'], medical_advisories):
             decision_list.append("Quarantine")
 
-        # Check for Rejection conditions.
+        # Check for Rejection condition (invalid record)
         elif not record_valid(record):
             decision_list.append("Reject")
 
-        elif visitor_visa_required(record[], record[], visitor_visas) or transit_visa_required(record[], record[], transit_visas):
-            if not record_valid(record) or not valid_date_format(record[]) or not visa_date_valid(record[]):
-                decision_list.append("Reject")
+        # Check for Rejection condition (visa required but not present or invalid)
+        elif #REJECTION CONDITIONS
 
         # Check for Secondary Processing conditions.
-        elif on_watchlist(entry, watchlist):
+        elif on_watchlist(record, watchlist):
             decision_list.append("Secondary")
 
-        # Accept if none of the other conditions have been met.
+        # Accept if none of the non-Accept conditions have been met.
         else:
             decision_list.append("Accept")
 
@@ -84,30 +84,48 @@ def decide(input_file, watchlist_file, countries_file):
 
 def valid_passport_format(passport_number):
     """
-    Checks whether a pasport number is five sets of five alpha-number characters separated by dashes
+    Checks whether a passport number is five sets of five alpha-number characters separated by dashes
     :param passport_number: alpha-numeric string
     :return: Boolean; True if the format is valid, False otherwise
     """
-    passport_format = re.compile('.{5}-.{5}-.{5}-.{5}-.{5}')
+    passport_format = re.compile('^\w{5}-\w{5}-\w{5}-\w{5}-\w{5}$')
 
     if passport_format.match(passport_number):
         return True
     else:
         return False
 
-def visa_date valid(visa_date):
+
+def valid_visa_format(visa):
     """
-    :param: visa date, the date field from the record entry's visa.
-    :return: Boolean; True is the visa contains all required fields, has a valid date field and was issued in the
-                    last two years, False otherwise.
+    :param visa: the record's visa
+    :return: Boolean; True if the visa is valid (has a valid code and was issued less than two years ago).
     """
-    if valid_date_format(visa_date) and (#Deal with data calculation here):
+    visa_format = re.compile('^\w{5}-\w{5}$')
+
+    if visa_format.match(visa['date']):
         return True
     else:
         return False
 
 
+# A method to check if a visa is valid (has a valid date, and was issued in the last two years).
+# Admittedly, this function does not take the possibility of leap years into account.
+def valid_visa_date(visa):
+    """
+    :param visa: the record's visa
+    :return: Boolean; True if the visa's date is valid and the via was issued in the last two years, False otherwise.
+    """
+    if valid_date_format(visa['date']):
+        visa_date = datetime.date(visa['date'][0:4], visa['date'][5:7], visa['date'][8:10])
 
+        # Check if the visa issue date was in the past two years.
+        if 0 < datetime.datetime.today() - visa_date <= 730:
+            return True
+    return False
+
+
+# Check a date string for the correct format.
 def valid_date_format(date_string):
     """
     Checks whether a date has the format YYYY-mm-dd in numbers
@@ -124,53 +142,88 @@ def valid_date_format(date_string):
 # Check if a record entry contains the minimum numbers of fields for it to have basic validity.
 def record_valid(record):
     """
-    :param record:
+    :param record: the record being checked for validity.
     :return: Boolean; True if the entry record has all required information (First Name, Last Name, Birth Date,
                 Passport Number (w correct format), Home, From, Reason for Entry), False otherwise.
     """
-    if not record['first_name'] is '' and not record['last_name'] is '' \
-        and valid_passport_format(record['passport'])
+    # Check validity logic.
+    if not record['first_name'] is '' and not record['last_name'] is '':
+        if valid_passport_format(record['passport']):
+            if not record['home'] is '' and not record['from']:
+                if not record['entry_reason'] is '':
+                    return True
+    return False
+
 
 # Check if the record entry is on the watchlist (name or passport)
-def on_watchlist(first_name, last_name, passport_number, watchlist):
+def on_watchlist(first_name, last_name, passport, watchlist):
     """
-    :param first_name:
-    :param last_name:
-    :param passport_number:
-    :param watchlist:
-    :return:
+    :param first_name: the record's first_name entry
+    :param last_name: the record's last_name entry
+    :param passport: the record's passport
+    :param watchlist: the watchlist JSON object
+    :return: True if the record's first and last name or passport are on the Watchlist, False otherwise.
     """
+    for watchlist_item in watchlist:
+        if watchlist_item['first_name'] == first_name and watchlist_item['last_name'] == last_name:
+            return True
+        elif watchlist_item['passport'] == passport:
+            return True
+        else:
+            return False
+
 
 # Check if a record entry is a citizen returning home.
-def returning_home(home_string, reason_for_entry):
+def returning_home(home_country, reason_for_entry):
     """
-    :param home_string:
-    :param reason_for_entry:
-    :return: True if the entry record has Home == "KAN" and Reason for Entry == "returning", False otherwise.
+    :param home_country: the record's home country entry.
+    :param reason_for_entry: the record's entry_reason entry.
+    :return: boolean, True if the record has home_country equal to KAN and reason_For_entry equal to returning;
+    False otherwise.
     """
+    if home_country == 'KAN' and reason_for_entry == 'returning':
+        return True
+    return False
+
 
 # Check if a record entry requires a visitor visa
 def visitor_visa_required(reason_for_entry, home_country, visitor_visa_list):
     """
-    :param reason_for_entry:
-    :param watchlist:
-    :return:
+    :param reason_for_entry: the record's entry_reason entry
+    :param home_country: the record's home country
+    :param visitor_visa_list: the visitor visa list
+    :return: Boolean; True if the record requires a visitor visa, False otherwise.
     """
+    if reason_for_entry == 'visit':
+        for country in visitor_visa_list:
+            if home_country == country:
+                return True
+    return False
 
 
 # Check if a record entry requires a transport visa
 def transit_visa_required(reason_for_entry, home_country, transit_visa_list):
     """
-    :param passport_number:
-    :param countries:
-    :return:
-    """
+   :param reason_for_entry: the record's entry_reason string
+   :param home_country: the entry's home_country
+   :param transit_visa_list:
+   :return: True if the record requires an transit visa, False otherwise.
+   """
+    if reason_for_entry == 'transit':
+        for country in transit_visa_list:
+            if home_country == country:
+                return True
+    return False
 
 
 def has_medical_advisory(home_country, from_country, medical_advisories):
     """
-    :param home_string:
-    :param from_string:
-    :param watchlist:
-    :return: Boolean; True if either of the record's Home or From Locations have a Medical Advisory, False otherwise.
-    """
+   :param home_country: the record's home country.
+   :param from_country: the record's from country.
+   :param medical_advisories: the list of countries with medical advisories.
+   :return:
+   """
+    for country in medical_advisories:
+        if home_country == country or from_country == country:
+            return True
+    return False
