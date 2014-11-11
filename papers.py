@@ -232,7 +232,7 @@ def transit_visa_required(reason_for_entry, home_country, transit_visa_list):
    """
     if reason_for_entry == 'transit':
         for country in transit_visa_list:
-            if home_country == country:
+            if home_country == country['code']:
                 return True
     return False
 
