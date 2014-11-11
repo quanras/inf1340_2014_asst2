@@ -2,13 +2,13 @@
 
 """ Computer-based immigration office for Kanadia """
 
-__author__ = 'Susan Sim / Evan Moir'
-__email__ = "ses@drsusansim.org"
+__author__ = 'Evan Moir'
+__email__ = 'evan.moir@utoronto.ca'
 
-__copyright__ = "2014 Susan Sim / Evan Moir"
-__license__ = "MIT License"
+__copyright__ = '2014 Susan Sim / Evan Moir'
+__license__ = 'MIT License'
 
-__status__ = "Final Submission"
+__status__ = 'Final Submission'
 
 # imports one per line
 import re
@@ -62,22 +62,29 @@ def decide(input_file, watchlist_file, countries_file):
 
         # Check for Quarantine condition.
         if has_medical_advisory(record['home']['country'], record['from']['country'], medical_advisories):
-            decision_list.append("Quarantine")
+            decision_list.append('Quarantine')
 
-        # Check for Rejection condition (invalid record)
-        elif not record_valid(record):
-            decision_list.append("Reject")
+        # Check for Rejection condition (incomplete record)
+        elif not complete_record(record):
+            decision_list.append('Reject')
 
-        # Check for Rejection condition (visa required but not present or invalid)
-        elif #REJECTION CONDITIONS
+        # Check for Rejection condition (travel visa required but not present, or invalid/expired)
+        elif visitor_visa_required(record['entry_reason'], record['home']['country'], visitor_visas):
+            if not 'visa' in record or not valid_visa_date(record['visa']):
+                decision_list.append('Reject')
+
+        # Check for Rejection condition (transit visa required but not present, or invalid/expired)
+        elif transit_visa_required(record['entry_reason'], record['from']['country'], transit_visas):
+            if not 'visa' in record or not valid_visa_date(record['visa']):
+                decision_list.append('Reject')
 
         # Check for Secondary Processing conditions.
-        elif on_watchlist(record, watchlist):
-            decision_list.append("Secondary")
+        elif on_watchlist(record['first_name'], record['last_name'], record['passport'] watchlist):
+            decision_list.append('Secondary')
 
         # Accept if none of the non-Accept conditions have been met.
         else:
-            decision_list.append("Accept")
+            decision_list.append('Accept')
 
     return decision_list
 
@@ -140,19 +147,31 @@ def valid_date_format(date_string):
 
 
 # Check if a record entry contains the minimum numbers of fields for it to have basic validity.
-def record_valid(record):
+def complete_record(record):
     """
     :param record: the record being checked for validity.
     :return: Boolean; True if the entry record has all required information (First Name, Last Name, Birth Date,
                 Passport Number (w correct format), Home, From, Reason for Entry), False otherwise.
     """
-    # Check validity logic.
-    if not record['first_name'] is '' and not record['last_name'] is '':
-        if valid_passport_format(record['passport']):
-            if not record['home'] is '' and not record['from']:
-                if not record['entry_reason'] is '':
-                    return True
-    return False
+    valid_entry_reasons = ['visit', 'transit', 'returning']
+
+    if not 'first_name' in record.keys() or record['first_name'] is '':
+        return False
+    elif not 'last_name' in record.keys() or record['last_name'] is '':
+        return False
+    elif not 'birth_date' in record.keys() or not valid_date_format(record['birth_date']):
+        return False
+    elif not 'passport' in record.keys() or not valid_passport_format(record['passport']):
+        return False
+    elif not 'home' in record.keys():
+        return False
+    elif not 'from' in record.keys():
+        return False
+    elif not 'entry_reason' in record.keys():
+        return False
+    elif not record['entry_reason'] in valid_entry_reasons:
+        return False
+    return True
 
 
 # Check if the record entry is on the watchlist (name or passport)
